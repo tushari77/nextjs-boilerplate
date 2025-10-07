@@ -1,12 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems = [
     { href: "/", label: "Home" },
@@ -14,6 +17,31 @@ export default function Navbar() {
     { href: "/projects", label: "Projects" },
     { href: "/contact", label: "Contact" },
   ];
+
+  // Load session (check if user is logged in)
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
+
+    // Listen to auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
   return (
     <header className="w-full bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-40">
@@ -48,12 +76,29 @@ export default function Navbar() {
               );
             })}
 
-            <Link
-              href="/signin"
-              className="ml-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm bg-indigo-600 text-white hover:opacity-95"
-            >
-              Sign in
-            </Link>
+            {!user ? (
+              <>
+                <Link
+                  href="/login"
+                  className="ml-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm bg-indigo-600 text-white hover:opacity-95"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  className="ml-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+                >
+                  Sign Up
+                </Link>
+              </>
+            ) : (
+              <button
+                onClick={handleLogout}
+                className="ml-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm bg-red-600 text-white hover:opacity-90"
+              >
+                Logout
+              </button>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -110,13 +155,34 @@ export default function Navbar() {
                 );
               })}
 
-              <Link
-                href="/signin"
-                onClick={() => setOpen(false)}
-                className="block w-full text-center px-3 py-2 rounded-md text-base font-medium bg-indigo-600 text-white"
-              >
-                Sign in
-              </Link>
+              {!user ? (
+                <>
+                  <Link
+                    href="/login"
+                    onClick={() => setOpen(false)}
+                    className="block w-full text-center px-3 py-2 rounded-md text-base font-medium bg-indigo-600 text-white"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/signup"
+                    onClick={() => setOpen(false)}
+                    className="block w-full text-center px-3 py-2 rounded-md text-base font-medium bg-gray-100 text-gray-700"
+                  >
+                    Sign Up
+                  </Link>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    handleLogout();
+                  }}
+                  className="block w-full text-center px-3 py-2 rounded-md text-base font-medium bg-red-600 text-white"
+                >
+                  Logout
+                </button>
+              )}
             </div>
           </div>
         )}
