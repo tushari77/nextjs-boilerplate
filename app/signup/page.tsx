@@ -111,6 +111,10 @@ export default function SignupPage() {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`, // 👈 matches Supabase redirect
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent", // optional: ensures refresh token
+        },
       },
     });
     setLoading(false);
